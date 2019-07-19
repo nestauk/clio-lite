@@ -2,6 +2,10 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*zip
+*txt
+config/allowed_endpoints
+config/function_name
 
 # C extensions
 *.so

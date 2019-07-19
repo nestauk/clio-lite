@@ -1,0 +1,21 @@
+language: python
+python:
+  - '3.6'
+install:
+  - pip install --upgrade setuptools
+  - python setup.py install
+  - pip install -r requirements.txt
+  - pip install awscli --upgrade --user
+  - python -c "import sys; print(sys.path)"
+before_script:
+  - sudo rm -f /etc/boto.cfg
+  - export PATH=~/.local/bin:$PATH
+script:
+  - ./.travis/run.sh
+env:
+  global:
+    - secure: 
+branches:
+  only:
+    - master
+    - dev
