@@ -12,6 +12,15 @@ def try_pop(x, k, default=None):
         return v
 
 
+def format_response(response):
+    return {
+        "isBase64Encoded": False,
+        "statusCode": response.status_code,
+        "headers": {},
+        "body": response.text
+    }
+
+
 def lambda_handler(event, context=None):
     query = json.loads(event['body'])
 
@@ -26,14 +35,17 @@ def lambda_handler(event, context=None):
                                    '30%')
 
     # Generate the endpoint URL, and validate
-    endpoint = query.pop('es_endpoint')
+    endpoint = event['headers'].pop('es-endpoint')
     if endpoint not in os.environ['ALLOWED_ENDPOINTS'].split(","):
         raise ValueError(f'{endpoint} has not been registered')
-    url = f"https://{endpoint}/{event['pathParameters']['proxy']}"
+    url = (f"https://{endpoint}/"
+           "{event['pathParameters']['proxy']}")
 
     # Make the initial request
     r = requests.post(url, data=json.dumps(query),
                       headers=event['headers'])
+    if not url.endswith("_search"):
+        return format_response(r)
     data = json.loads(r.text)
 
     # Formulate the MLT query
@@ -59,9 +71,4 @@ def lambda_handler(event, context=None):
     # Make the new query and return
     r = requests.post(url, data=json.dumps(mlt_query),
                       headers=event['headers'])
-    return {
-        "isBase64Encoded": False,
-        "statusCode": r.status_code,
-        "headers": {},
-        "body": r.text
-    }
+    return format_response(r)
