@@ -52,7 +52,7 @@ def lambda_handler(event, context=None):
 
     # Generate the endpoint URL, and validate
     endpoint = event['headers'].pop('es-endpoint')
-    if endpoint not in os.environ['ALLOWED_ENDPOINTS'].split(","):
+    if endpoint not in os.environ['ALLOWED_ENDPOINTS'].split(";"):
         raise ValueError(f'{endpoint} has not been registered')
     url = (f"https://{endpoint}/"
            f"{event['pathParameters']['proxy']}")
