@@ -16,9 +16,25 @@ def format_response(response):
     return {
         "isBase64Encoded": False,
         "statusCode": response.status_code,
-        "headers": {},
+        "headers": {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Credentials": True
+        },
         "body": response.text
     }
+
+
+def retry_query(r_old, old_query, url, event):
+    # Just make a simple query
+    try:
+        q = old_query.pop("bool")["should"][0]["simple_query_string"]["query"]
+        new_query = dict(query={"query_string": {"query": q}},
+                         **old_query)
+        r_new = requests.post(url, data=json.dumps(new_query),
+                              headers=event['headers'])
+    except KeyError:
+        r_new = r_old
+    return r_new
 
 
 def lambda_handler(event, context=None):
@@ -27,10 +43,10 @@ def lambda_handler(event, context=None):
     # Extract info from the query as required
     _from = try_pop(query, 'from')
     _size = try_pop(query, 'size')
-    min_term_freq = try_pop(query, 'min_term_freq', 2)
-    max_query_terms = try_pop(query, 'max_query_terms', 25)
-    min_doc_freq = try_pop(query, 'min_doc_freq', 5)
-    max_doc_frac = try_pop(query, 'max_doc_frac', 0.95)
+    min_term_freq = try_pop(query, 'min_term_freq', 1)
+    max_query_terms = try_pop(query, 'max_query_terms', 10)
+    min_doc_freq = try_pop(query, 'min_doc_freq', 1)
+    max_doc_frac = try_pop(query, 'max_doc_frac', 0.90)
     minimum_should_match = try_pop(query, 'minimum_should_match',
                                    '30%')
 
@@ -39,7 +55,7 @@ def lambda_handler(event, context=None):
     if endpoint not in os.environ['ALLOWED_ENDPOINTS'].split(","):
         raise ValueError(f'{endpoint} has not been registered')
     url = (f"https://{endpoint}/"
-           "{event['pathParameters']['proxy']}")
+           f"{event['pathParameters']['proxy']}")
 
     # Make the initial request
     r = requests.post(url, data=json.dumps(query),
@@ -51,10 +67,23 @@ def lambda_handler(event, context=None):
     # Formulate the MLT query
     docs = [{'_id': row['_id'], '_index': row['_index']}
             for row in data['hits']['hits']]
+    try:
+        old_query = query.pop('query')
+    except KeyError:
+        pass
+    else:
+        if len(docs) == 0:
+            r = retry_query(r, old_query, url, event)
+            data = json.loads(r.text)
+            docs = [{'_id': row['_id'], '_index': row['_index']}
+                    for row in data['hits']['hits']]
+    if len(docs) == 0:
+        return format_response(r)
+
     max_doc_freq = int(max_doc_frac*data['hits']['total'])
     mlt_query = {"query":
                  {"more_like_this":
-                  {"fields": ["body"],
+                  {"fields": ["title", "body"],
                    "like": docs,
                    "min_term_freq": min_term_freq,
                    "max_query_terms": max_query_terms,
@@ -69,6 +98,13 @@ def lambda_handler(event, context=None):
         mlt_query['size'] = _size
 
     # Make the new query and return
-    r = requests.post(url, data=json.dumps(mlt_query),
-                      headers=event['headers'])
+    r_mlt = requests.post(url, data=json.dumps(dict(**query, **mlt_query)),
+                          headers=event['headers'])
+
+    # If successful, return
+    data = json.loads(r_mlt.text)
+    docs = [{'_id': row['_id'], '_index': row['_index']}
+            for row in data['hits']['hits']]
+    if len(docs) > 0:
+        return format_response(r_mlt)
     return format_response(r)
