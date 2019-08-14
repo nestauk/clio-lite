@@ -1,6 +1,7 @@
 import json
 from botocore.vendored import requests
 import os
+from copy import deepcopy
 
 
 def try_pop(x, k, default=None):
@@ -24,17 +25,25 @@ def format_response(response):
     }
 
 
-def retry_query(r_old, old_query, url, event):
-    # Just make a simple query
-    try:
-        q = old_query.pop("bool")["should"][0]["simple_query_string"]["query"]
-        new_query = dict(query={"query_string": {"query": q}},
-                         **old_query)
-        r_new = requests.post(url, data=json.dumps(new_query),
-                              headers=event['headers'])
-    except KeyError:
-        r_new = r_old
-    return r_new
+def simple_query(url, query, event, fields):
+    q = deepcopy(query).pop('bool')
+    q = q["should"][0]["simple_query_string"]["query"]
+    new_query = dict(query={"query_string": {"query": q,
+                                             "fields":fields}})
+    r = requests.post(url, data=json.dumps(new_query),
+                      headers=event['headers'],
+                      params={"search_type": "dfs_query_then_fetch"})
+    return r
+
+
+def extract_fields(q):
+    return q["bool"]["should"][1]["multi_match"]["fields"]
+
+
+def extract_docs(r):
+    data = json.loads(r.text)
+    return data, [{'_id': row['_id'], '_index': row['_index']}
+                  for row in data['hits']['hits']]
 
 
 def lambda_handler(event, context=None):
@@ -45,7 +54,7 @@ def lambda_handler(event, context=None):
     _size = try_pop(query, 'size')
     min_term_freq = try_pop(query, 'min_term_freq', 1)
     max_query_terms = try_pop(query, 'max_query_terms', 10)
-    min_doc_freq = try_pop(query, 'min_doc_freq', 1)
+    min_doc_freq = try_pop(query, 'min_doc_freq', 0.001)
     max_doc_frac = try_pop(query, 'max_doc_frac', 0.90)
     minimum_should_match = try_pop(query, 'minimum_should_match',
                                    '30%')
@@ -57,33 +66,38 @@ def lambda_handler(event, context=None):
     url = (f"https://{endpoint}/"
            f"{event['pathParameters']['proxy']}")
 
-    # Make the initial request
-    r = requests.post(url, data=json.dumps(query),
-                      headers=event['headers'])
     if not url.endswith("_search"):
+        r = requests.post(url, data=json.dumps(query),
+                          headers=event['headers'])
         return format_response(r)
-    data = json.loads(r.text)
 
     # Formulate the MLT query
-    docs = [{'_id': row['_id'], '_index': row['_index']}
-            for row in data['hits']['hits']]
-    try:
-        old_query = query.pop('query')
-    except KeyError:
-        pass
-    else:
-        if len(docs) == 0:
-            r = retry_query(r, old_query, url, event)
-            data = json.loads(r.text)
-            docs = [{'_id': row['_id'], '_index': row['_index']}
-                    for row in data['hits']['hits']]
-    if len(docs) == 0:
+    old_query = deepcopy(try_pop(query, 'query'))
+    fields = extract_fields(old_query)
+    if old_query is None:
+        # Implies that this is just an empty query
+        # so re-insert the to/from and return
+        query['from'] = _from
+        query['size'] = _size
+        r = requests.post(url, data=json.dumps(query),
+                          headers=event['headers'])
+        #print("Default query")
         return format_response(r)
 
+    # Make the initial request
+    r = simple_query(url, old_query, event, fields)
+    data, docs = extract_docs(r)
+    # If no docs, give up
+    if len(docs) == 0:
+        #print("Initial query failed")
+        return format_response(r)
+
+    # Formulate the MLT query
     max_doc_freq = int(max_doc_frac*data['hits']['total'])
+    min_doc_freq = int(min_doc_freq*data['hits']['total'])
     mlt_query = {"query":
                  {"more_like_this":
-                  {"fields": ["title", "body"],
+                  {"fields": fields,
                    "like": docs,
                    "min_term_freq": min_term_freq,
                    "max_query_terms": max_query_terms,
@@ -92,19 +106,21 @@ def lambda_handler(event, context=None):
                    "boost_terms": 1.,
                    "minimum_should_match": minimum_should_match,
                    "include": True}}}
-    if _from is not None:
+    if _from is not None and _from < len(docs):
         mlt_query['from'] = _from
     if _size is not None:
         mlt_query['size'] = _size
 
     # Make the new query and return
-    r_mlt = requests.post(url, data=json.dumps(dict(**query, **mlt_query)),
-                          headers=event['headers'])
-
+    r_mlt = requests.post(url, data=json.dumps(dict(**query,
+                                                    **mlt_query)),
+                          headers=event['headers'],
+                          params={"search_type": "dfs_query_then_fetch"})
     # If successful, return
-    data = json.loads(r_mlt.text)
-    docs = [{'_id': row['_id'], '_index': row['_index']}
-            for row in data['hits']['hits']]
+    _data, docs = extract_docs(r_mlt)
+
     if len(docs) > 0:
+        #print("MLT query")
         return format_response(r_mlt)
+    #print('MLT query failed')
     return format_response(r)
