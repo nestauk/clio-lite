@@ -49,6 +49,18 @@ def extract_docs(r):
 def lambda_handler(event, context=None):
     query = json.loads(event['body'])
 
+    # Generate the endpoint URL, and validate
+    endpoint = event['headers'].pop('es-endpoint')
+    if endpoint not in os.environ['ALLOWED_ENDPOINTS'].split(";"):
+        raise ValueError(f'{endpoint} has not been registered')
+    
+    url = f"https://{endpoint}/{event['pathParameters']['proxy']}"
+    # If not a search query, return
+    if not url.endswith("_search") or 'query' not in query:
+        r = requests.post(url, data=json.dumps(query),
+                          headers=event['headers'])
+        return format_response(r)
+
     # Extract info from the query as required
     _from = try_pop(query, 'from')
     _size = try_pop(query, 'size')
@@ -57,44 +69,21 @@ def lambda_handler(event, context=None):
     min_doc_freq = try_pop(query, 'min_doc_freq', 0.001)
     max_doc_frac = try_pop(query, 'max_doc_frac', 0.90)
     minimum_should_match = try_pop(query, 'minimum_should_match',
-                                   '30%')
-
-    # Generate the endpoint URL, and validate
-    endpoint = event['headers'].pop('es-endpoint')
-    if endpoint not in os.environ['ALLOWED_ENDPOINTS'].split(";"):
-        raise ValueError(f'{endpoint} has not been registered')
-    url = (f"https://{endpoint}/"
-           f"{event['pathParameters']['proxy']}")
-
-    if not url.endswith("_search"):
-        r = requests.post(url, data=json.dumps(query),
-                          headers=event['headers'])
-        return format_response(r)
-
-    # Formulate the MLT query
-    old_query = deepcopy(try_pop(query, 'query'))
-    fields = extract_fields(old_query)
-    if old_query is None:
-        # Implies that this is just an empty query
-        # so re-insert the to/from and return
-        query['from'] = _from
-        query['size'] = _size
-        r = requests.post(url, data=json.dumps(query),
-                          headers=event['headers'])
-        #print("Default query")
-        return format_response(r)
+                                   '20%')
 
     # Make the initial request
+    old_query = deepcopy(try_pop(query, 'query'))
+    fields = extract_fields(old_query)
     r = simple_query(url, old_query, event, fields)
     data, docs = extract_docs(r)
-    # If no docs, give up
+    # If no results, give up
     if len(docs) == 0:
-        #print("Initial query failed")
         return format_response(r)
 
     # Formulate the MLT query
-    max_doc_freq = int(max_doc_frac*data['hits']['total'])
-    min_doc_freq = int(min_doc_freq*data['hits']['total'])
+    total = data['hits']['total']
+    max_doc_freq = int(max_doc_frac*total)
+    min_doc_freq = int(min_doc_freq*total)
     mlt_query = {"query":
                  {"more_like_this":
                   {"fields": fields,
@@ -106,7 +95,7 @@ def lambda_handler(event, context=None):
                    "boost_terms": 1.,
                    "minimum_should_match": minimum_should_match,
                    "include": True}}}
-    if _from is not None and _from < len(docs):
+    if _from is not None and _from < total:
         mlt_query['from'] = _from
     if _size is not None:
         mlt_query['size'] = _size
@@ -118,9 +107,4 @@ def lambda_handler(event, context=None):
                           params={"search_type": "dfs_query_then_fetch"})
     # If successful, return
     _data, docs = extract_docs(r_mlt)
-
-    if len(docs) > 0:
-        #print("MLT query")
-        return format_response(r_mlt)
-    #print('MLT query failed')
-    return format_response(r)
+    return format_response(r_mlt)
