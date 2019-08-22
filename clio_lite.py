@@ -5,6 +5,7 @@ from copy import deepcopy
 
 
 def try_pop(x, k, default=None):
+    """"""
     try:
         v = x.pop(k)
     except KeyError:
