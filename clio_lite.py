@@ -50,11 +50,20 @@ def extract_docs(r):
 def lambda_handler(event, context=None):
     query = json.loads(event['body'])
 
+    # Strip out any extreme upper limits from the post_filter
+    try:
+        lim = int(os.environ['RANGE_UPPER_LIMIT'])
+        for field, limits in query['post_filter']['range'].items():
+            if 'lte' in limits and int(limits['lte']) >= lim:
+                query['post_filter']['range'][field].pop('lte')
+    except KeyError:
+        pass
+
     # Generate the endpoint URL, and validate
     endpoint = event['headers'].pop('es-endpoint')
     if endpoint not in os.environ['ALLOWED_ENDPOINTS'].split(";"):
         raise ValueError(f'{endpoint} has not been registered')
-    
+
     url = f"https://{endpoint}/{event['pathParameters']['proxy']}"
     # If not a search query, return
     if not url.endswith("_search") or 'query' not in query:

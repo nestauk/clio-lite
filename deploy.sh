@@ -2,6 +2,7 @@
 
 FUNCTION_NAME=$(cat config/function_name)
 ALLOWED_ENDPOINTS=$(cat config/allowed_endpoints)
+RANGE_UPPER_LIMIT=$(cat config/range_upper_limit)
 
 set -e
 set -x
@@ -42,7 +43,7 @@ then
     # Pick up the allowed endpoints
     aws lambda update-function-configuration \
 	--function-name $FUNCTION_NAME \
-	--environment Variables={ALLOWED_ENDPOINTS=$ALLOWED_ENDPOINTS}
+	--environment Variables="{ALLOWED_ENDPOINTS=$ALLOWED_ENDPOINTS,RANGE_UPPER_LIMIT=$RANGE_UPPER_LIMIT}"
 else
     echo "Nothing to do for version $VERSION"
 fi
