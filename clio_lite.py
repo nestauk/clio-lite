@@ -4,10 +4,19 @@ import os
 from copy import deepcopy
 
 
-def try_pop(x, k, default=None):
-    """"""
+def try_pop(d, k, default=None):
+    """Pop a key from a dict, with a default
+    value if the key doesn't exist
+
+    Args:
+        d (dict): The dict to pop
+        k: The key to pop from the dict
+        default: The default value to return, should `k` not exist in `d`.
+    Returns:
+        v: A value at key `k`
+    """
     try:
-        v = x.pop(k)
+        v = d.pop(k)
     except KeyError:
         v = default
     finally:
@@ -15,6 +24,7 @@ def try_pop(x, k, default=None):
 
 
 def format_response(response):
+    """Format the :obj:`requests.Response`, as expected by AWS API Gateway"""
     return {
         "isBase64Encoded": False,
         "statusCode": response.status_code,
@@ -27,7 +37,17 @@ def format_response(response):
 
 
 def simple_query(url, query, event, fields):
-    q = deepcopy(query).pop('bool')
+    """Perform a simple query on Elasticsearch.
+
+    Args:
+        url (str): The Elasticsearch endpoint.
+        query (str): The query to make to ES.
+        event (dict): The event passed to the lambda handler.
+        fields (list): List of fields to query.
+    Returns:
+        The ES request response.
+    """
+    q = deepcopy(query).pop('bool')  # Don't mess with the original query
     q = q["should"][0]["simple_query_string"]["query"]
     new_query = dict(query={"query_string": {"query": q,
                                              "fields":fields}})
@@ -38,16 +58,23 @@ def simple_query(url, query, event, fields):
 
 
 def extract_fields(q):
+    """Extract which fields are being interrogated 
+    by the default searchkit request"""
     return q["bool"]["should"][1]["multi_match"]["fields"]
 
 
 def extract_docs(r):
+    """Extract the raw data and documents from the :obj:`requests.Response`"""    
     data = json.loads(r.text)
     return data, [{'_id': row['_id'], '_index': row['_index']}
                   for row in data['hits']['hits']]
 
 
 def lambda_handler(event, context=None):
+    """The 'main' function: Process the API Gateway Event
+    passed to Lambda by
+    performing an expansion on the original ES query."""
+
     query = json.loads(event['body'])
 
     # Strip out any extreme upper limits from the post_filter
