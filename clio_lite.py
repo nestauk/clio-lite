@@ -81,6 +81,8 @@ def lambda_handler(event, context=None):
     try:
         lim = int(os.environ['RANGE_UPPER_LIMIT'])
         for field, limits in query['post_filter']['range'].items():
+            if field.startswith('year') or field.startswith('date'):
+                continue
             if 'lte' in limits and int(limits['lte']) >= lim:
                 query['post_filter']['range'][field].pop('lte')
     except KeyError:
