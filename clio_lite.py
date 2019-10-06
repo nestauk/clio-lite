@@ -49,6 +49,7 @@ def simple_query(url, query, event, fields):
     """
     q = deepcopy(query).pop('bool')  # Don't mess with the original query
     q = q["should"][0]["simple_query_string"]["query"]
+    q = q.lower()
     new_query = dict(query={"query_string": {"query": q,
                                              "fields":fields}})
     r = requests.post(url, data=json.dumps(new_query),
@@ -64,10 +65,20 @@ def extract_fields(q):
 
 
 def extract_docs(r):
-    """Extract the raw data and documents from the :obj:`requests.Response`"""    
+    """Extract the raw data and documents from the :obj:`requests.Response`"""
     data = json.loads(r.text)
     return data, [{'_id': row['_id'], '_index': row['_index']}
                   for row in data['hits']['hits']]
+
+
+def pop_upper_lim(post_filter):
+    """Strip out any extreme upper limits from the sk post_filter"""
+    lim = int(os.environ['RANGE_UPPER_LIMIT'])
+    for field, limits in post_filter.items():
+        if field.startswith('year') or field.startswith('date'):
+            continue
+        if 'lte' in limits and int(limits['lte']) >= lim:
+            post_filter[field].pop('lte')
 
 
 def lambda_handler(event, context=None):
@@ -79,14 +90,18 @@ def lambda_handler(event, context=None):
 
     # Strip out any extreme upper limits from the post_filter
     try:
-        lim = int(os.environ['RANGE_UPPER_LIMIT'])
-        for field, limits in query['post_filter']['range'].items():
-            if field.startswith('year') or field.startswith('date'):
-                continue
-            if 'lte' in limits and int(limits['lte']) >= lim:
-                query['post_filter']['range'][field].pop('lte')
+        post_filter = query['post_filter']
     except KeyError:
         pass
+    else:
+        print(post_filter)
+        if 'range' in post_filter:
+            pop_upper_lim(post_filter['range'])
+        elif 'bool' in post_filter:
+            for row in post_filter['bool']['must']:
+                if 'range' not in row:
+                    continue
+                pop_upper_lim(row['range'])
 
     # Generate the endpoint URL, and validate
     endpoint = event['headers'].pop('es-endpoint')
