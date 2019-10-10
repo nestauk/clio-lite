@@ -11,10 +11,11 @@ set -x
 pytest
 
 # Get latest code version
-VERSION=$(git for-each-ref refs/tags\
-	      --sort=-taggerdate \
-	      --format='%(refname)' \
-	      --count=1 | cut -c 12-)
+#VERSION=$(git for-each-ref refs/tags\
+#	      --sort=-taggerdate \
+#	      --format='%(refname)' \
+#	      --count=1 | cut -c 12-)
+VERSION=11
 
 # Check if lambda exists
 set +e
