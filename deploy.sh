@@ -11,11 +11,7 @@ set -x
 pytest
 
 # Get latest code version
-#VERSION=$(git for-each-ref refs/tags\
-#	      --sort=-taggerdate \
-#	      --format='%(refname)' \
-#	      --count=1 | cut -c 12-)
-VERSION=11
+VERSION=$(python -c "import re, sys; print(max(int(x) for x in re.findall('refs\/tags\/v([0-9]+)', ' '.join(sys.argv[1:]))))" $(git for-each-ref refs/tags --format='%(refname)'))
 
 # Check if lambda exists
 set +e
