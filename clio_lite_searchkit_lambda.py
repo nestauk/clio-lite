@@ -2,25 +2,8 @@ import json
 from botocore.vendored import requests
 import os
 from copy import deepcopy
-
-
-def try_pop(d, k, default=None):
-    """Pop a key from a dict, with a default
-    value if the key doesn't exist
-
-    Args:
-        d (dict): The dict to pop
-        k: The key to pop from the dict
-        default: The default value to return, should `k` not exist in `d`.
-    Returns:
-        v: A value at key `k`
-    """
-    try:
-        v = d.pop(k)
-    except KeyError:
-        v = default
-    finally:
-        return v
+from clio_utils import try_pop
+from clio_utils import extract_docs
 
 
 def format_response(response):
@@ -51,7 +34,7 @@ def simple_query(url, query, event, fields):
     q = q["should"][0]["simple_query_string"]["query"]
     q = q.lower()
     new_query = dict(query={"query_string": {"query": q,
-                                             "fields": fields}})
+                                             "fields":fields}})
     r = requests.post(url, data=json.dumps(new_query),
                       headers=event['headers'],
                       params={"search_type": "dfs_query_then_fetch"})
@@ -62,13 +45,6 @@ def extract_fields(q):
     """Extract which fields are being interrogated 
     by the default searchkit request"""
     return q["bool"]["should"][1]["multi_match"]["fields"]
-
-
-def extract_docs(r):
-    """Extract the raw data and documents from the :obj:`requests.Response`"""
-    data = json.loads(r.text)
-    return data, [{'_id': row['_id'], '_index': row['_index']}
-                  for row in data['hits']['hits']]
 
 
 def pop_upper_lim(post_filter):
@@ -129,13 +105,12 @@ def lambda_handler(event, context=None):
     old_query = deepcopy(try_pop(query, 'query'))
     fields = extract_fields(old_query)
     r = simple_query(url, old_query, event, fields)
-    data, docs = extract_docs(r)
+    total, docs = extract_docs(r)
     # If no results, give up
-    if len(docs) == 0:
+    if total == 0:
         return format_response(r)
 
     # Formulate the MLT query
-    total = data['hits']['total']
     max_doc_freq = int(max_doc_frac*total)
     min_doc_freq = int(min_doc_freq*total)
     mlt_query = {"query":
@@ -160,5 +135,4 @@ def lambda_handler(event, context=None):
                           headers=event['headers'],
                           params={"search_type": "dfs_query_then_fetch"})
     # If successful, return
-    _data, docs = extract_docs(r_mlt)
     return format_response(r_mlt)

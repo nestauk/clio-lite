@@ -22,7 +22,7 @@ if [ $? -ne 0 ]
 then
     echo "Version $VERSION not found"
     # Deploy new lambda version
-    zip clio_lite.zip clio_lite.py
+    zip clio_lite.zip clio_lite/* #clio_lite.py
     PYCODE_="import sys, json; print(json.load(sys.stdin)['Version'])"
     FUNCTION_VERSION=$(aws lambda update-function-code \
 			   --function-name $FUNCTION_NAME \
