@@ -10,7 +10,7 @@ Expansive ***contextual searches*** of Elasticsearch data, as described in [this
 
 ### Installation
 
-`pip install --upgrade git+https://github.com/nestauk/clio-lite`
+`pip install --upgrade git+https://github.com/nestauk/clio-lite.git`
 
 ### Very basic usage
 
