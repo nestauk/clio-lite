@@ -29,7 +29,7 @@ common_kwargs = dict(
     include_package_data=True,
 )
 
-setup(name='nesta',
+setup(name='clio_lite',
       packages=find_namespace_packages(where='.'),
       **common_kwargs)
 
