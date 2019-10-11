@@ -30,6 +30,6 @@ common_kwargs = dict(
 )
 
 setup(name='clio_lite',
-      packages=['clio_lite'],
+      packages=['.'],
       **common_kwargs)
 
