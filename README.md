@@ -1,6 +1,6 @@
 # clio-lite
 
-Expansive ***contextual document searches*** of Elasticsearch data, as described in [this blog](TO BE PUBLISHED SOON). For an interactive sense of how this works, see [the arXlive search tool](https://i5mf7l0opc.execute-api.eu-west-1.amazonaws.com/dev/hierarxy/).
+Expansive ***contextual searches*** of Elasticsearch data, as described in [this blog](TO BE PUBLISHED SOON). For an interactive sense of how this works, see [the arXlive search tool](https://i5mf7l0opc.execute-api.eu-west-1.amazonaws.com/dev/hierarxy/).
 
 [`clio-lite` as python tool](https://github.com/nestauk/clio-lite#clio-lite-as-python-tool)
 
