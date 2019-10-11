@@ -8,10 +8,19 @@ For an interactive sense of how this works, see [the arXlive search tool](https:
 
 ### Installation
 
-`pip install git+https://github.com/nestauk/clio-lite`
+`pip install --upgrade git+https://github.com/nestauk/clio-lite`
 
 ### Very basic usage
 
+```python
+from clio_lite import clio_search
+
+url = "https://URL_FOR_ELASTICSEARCH"
+index = "AN_INDEX"
+query = "BERT transformers"
+
+total, docs = clio_search(url=url, index=index, query=query)
+```
 
 ### Less basic usage
 
