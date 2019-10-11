@@ -89,7 +89,7 @@ index (str):      The index that you want to query
 query (str):      Your query "search" string
 fields=[] (list): A list of fields to search
 limit (int):      Limit the number of results in `clio_search`
-offset (int):     Offset the number of results from the initial document.
+offset (int):     Offset the number of results from the highest ranking document.
 ```
 
 There are also the filters for the searches, which could be equal:
