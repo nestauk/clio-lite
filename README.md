@@ -1,6 +1,9 @@
 # clio-lite
 
-A contextual search of Elasticsearch data, as described in [this blog](https://medium.com/@joel.klinger/big-fast-nlp-with-elasticsearch-4ed44924e4d5).
+[`clio-lite` as python tool](https://github.com/nestauk/clio-lite#clio-lite-as-python-tool)
+[`clio-lite` as a serverless deployment for searchkit via AWS Lambda](https://github.com/nestauk/clio-lite#clio-lite-as-a-serverless-deployment-for-searchkit-via-aws-lambda)
+
+A contextual search of Elasticsearch data, as described in [this blog](TOO BE PUBLISHED SOON).
 
 For an interactive sense of how this works, see [the arXlive search tool](https://i5mf7l0opc.execute-api.eu-west-1.amazonaws.com/dev/hierarxy/).
 
