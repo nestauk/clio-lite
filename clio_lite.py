@@ -40,7 +40,8 @@ def simple_query(endpoint, query, fields, filters,
 def more_like_this(endpoint, docs, fields, limit, offset,
                    min_term_freq, max_query_terms,
                    min_doc_frac, max_doc_frac,
-                   min_should_match, total, filters=[], **kwargs):
+                   min_should_match, total, stop_words,
+                   filters=[], **kwargs):
     if total == 0:
         return (0, [])
     assert_fraction(min_should_match)
@@ -63,6 +64,7 @@ def more_like_this(endpoint, docs, fields, limit, offset,
             "min_doc_freq": min_doc_freq,
             "max_doc_freq": max_doc_freq,
             "boost_terms": 1,
+            "stop_words": stop_words,
             "minimum_should_match": f'{msm}%',
             "include": True
         }
@@ -86,8 +88,9 @@ def clio_search(url, index, query,
                 limit=None, offset=None,
                 min_term_freq=1, max_query_terms=10,
                 min_doc_frac=0.001, max_doc_frac=0.9,
-                min_should_match=0.2, pre_filters=[],
-                post_filters=[], **kwargs):
+                min_should_match=0.1, pre_filters=[],
+                post_filters=[], stop_words=[],
+                **kwargs):
     if "headers" not in kwargs:
         kwargs["headers"] = {}
     kwargs["headers"]["Content-Type"] = "application/json"
@@ -112,6 +115,7 @@ def clio_search(url, index, query,
                                  max_doc_frac=max_doc_frac,
                                  min_should_match=min_should_match,
                                  total=total,
+                                 stop_words=stop_words,
                                  filters=post_filters,
                                  **kwargs)
     return total, docs
