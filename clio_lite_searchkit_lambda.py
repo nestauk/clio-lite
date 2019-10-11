@@ -1,5 +1,5 @@
 import json
-from botocore.vendored import requests
+import requests
 import os
 from copy import deepcopy
 from clio_utils import try_pop

@@ -7,8 +7,8 @@ from clio_utils import extract_docs
 from clio_utils import assert_fraction
 from clio_lite import simple_query as c_simple_query
 from clio_lite import more_like_this as c_more_like_this
-from clio_lite import search as c_search
-from clio_lite import search_iter
+from clio_lite import clio_search as c_search
+from clio_lite import clio_search_iter
 
 
 @pytest.fixture
@@ -28,16 +28,21 @@ def mlt_kwargs():
 @pytest.fixture
 def mlt_query(mlt_kwargs):
     return {"query":
-            {"more_like_this":
-             {"fields": mlt_kwargs['fields'],
-              "like": mlt_kwargs['docs'],
-              "min_term_freq": mlt_kwargs['min_term_freq'],
-              "max_query_terms": mlt_kwargs['max_query_terms'],
-              "min_doc_freq": 100,
-              "max_doc_freq": 200,
-              "boost_terms": 1.,
-              "minimum_should_match": '50%',
-              "include": True}}}
+            {"bool":
+             {"must":
+              [{"more_like_this":
+                {"fields": mlt_kwargs['fields'],
+                 "like": mlt_kwargs['docs'],
+                 "min_term_freq": mlt_kwargs['min_term_freq'],
+                 "max_query_terms": mlt_kwargs['max_query_terms'],
+                 "min_doc_freq": 100,
+                 "max_doc_freq": 200,
+                 "boost_terms": 1.,
+                 "minimum_should_match": '50%',
+                 "include": True}}]
+              }
+             }
+            }
 
 
 @mock.patch('clio_lite.json')
@@ -72,9 +77,7 @@ def test_c_simple_query_filters(mocked_extract, mocked_reqs,
     assert set(kwargs) == set(['url', 'data', 'params',
                                'a_kwarg', 'another_kwarg'])
     query = kwargs['data']
-    assert all(k in query for k in filters)
-    for k in filters:
-        assert filters[k] == query[k]
+    assert query['query']['bool']['filter'] == filters
 
 
 def test_assert_fraction():
@@ -92,6 +95,7 @@ def test_c_more_like_this_filters(mocked_extract, mocked_reqs,
                                   mocked_json,
                                   mlt_kwargs, mlt_query):
     # Make an input query fixture and output query fixture
+    mlt_kwargs['filters'] = [None, None, 23]
     c_more_like_this(endpoint='someurl.com', a_kwarg=None,
                      another_kwarg=None, **mlt_kwargs)
     args, kwargs = mocked_reqs.post.call_args
@@ -101,8 +105,7 @@ def test_c_more_like_this_filters(mocked_extract, mocked_reqs,
     query = kwargs['data']
     assert query.pop('from') == mlt_kwargs['offset']
     assert query.pop('size') == mlt_kwargs['limit']
-    print(query)
-    print(mlt_query)
+    assert query['query']['bool'].pop('filter') == mlt_kwargs['filters']
     assert query == mlt_query
 
 
@@ -120,8 +123,7 @@ def test_c_more_like_this_no_filters(mocked_extract, mocked_reqs,
     query = kwargs['data']
     assert query.pop('from') == mlt_kwargs['offset']
     assert query.pop('size') == mlt_kwargs['limit']
-    print(query)
-    print(mlt_query)
+    assert query['query']['bool'].pop('filter') == []
     assert query == mlt_query
 
 
@@ -140,6 +142,7 @@ def test_c_more_like_this_bad_limit(mocked_extract, mocked_reqs,
     query = kwargs['data']
     assert 'from' not in query
     assert query.pop('size') == mlt_kwargs['limit']
+    assert query['query']['bool'].pop('filter') == []    
     assert query == mlt_query
 
 
@@ -156,7 +159,7 @@ def test_c_more_like_this_zero_total(mocked_extract, mocked_reqs,
     assert docs == []
 
 
-@mock.patch('clio_lite.simple_query', return_value=(None, None))
+@mock.patch('clio_lite.simple_query', return_value=(23, []))
 @mock.patch('clio_lite.more_like_this', return_value=(10, [1, 2, 3]))
 def test_search(mocked_mlt_query, mocked_simple_query):
     # test endpoint
@@ -172,6 +175,8 @@ def test_search(mocked_mlt_query, mocked_simple_query):
 
     _args, _kwargs = mocked_simple_query.call_args
     assert len(_args) == 0
+    assert _kwargs.pop('headers') == {'Content-Type':
+                                      'application/json'}
     assert _kwargs == dict(endpoint=expected_endpoint,
                            query=kwargs['query'],
                            fields=kwargs['fields'],
@@ -187,7 +192,7 @@ def test_search(mocked_mlt_query, mocked_simple_query):
     assert _kwargs['bonus_kwarg2'] == kwargs['bonus_kwarg2']
 
 
-@mock.patch('clio_lite.search')
+@mock.patch('clio_lite.clio_search')
 def test_search_iter(mocked_search):
     chunksize = 1000
     remainder = 23
@@ -196,7 +201,7 @@ def test_search_iter(mocked_search):
                  (None, ['a']*chunksize),
                  (None, ['b']*remainder))
     mocked_search.side_effect = responses
-    data = [row for row in search_iter()]
+    data = [row for row in clio_search_iter()]
     assert len(data) == 3*chunksize + remainder  # all rows yielded
     assert mocked_search.call_count == len(responses)  # 4 calls
     assert set(data) == set([0, None, 'a', 'b'])
@@ -220,11 +225,10 @@ def test_try_pop():
 def test_extract_docs(mocked_json):
     mocked_response = mock.MagicMock()
     hits = [{'_id': 'something', '_index': 'something',
-             '_source': {'something': 'else'}}]*100
+             '_source': {'something': 'else'}}]*100    
     _total = 10
     mocked_json.loads.return_value = {'hits': {'total': _total,
                                                'hits': hits}}
     total, docs = extract_docs(mocked_response)
     assert total == _total
     assert len(docs) == len(hits)
-    assert hits[0]['_source']['something'] == docs[0]['something']

@@ -3,6 +3,7 @@
 FUNCTION_NAME=$(cat config/function_name)
 ALLOWED_ENDPOINTS=$(cat config/allowed_endpoints)
 RANGE_UPPER_LIMIT=$(cat config/range_upper_limit)
+PACKAGE_DIR="clio_lite_lambda"
 
 set -e
 set -x
@@ -22,7 +23,15 @@ if [ $? -ne 0 ]
 then
     echo "Version $VERSION not found"
     # Deploy new lambda version
-    zip clio_lite.zip clio_lite/* #clio_lite.py
+    OLDPWD=$PWD
+    mkdir $PACKAGE_DIR &> /dev/null
+    pip install --target ./$PACKAGE_DIR requests
+    cp clio_utils.py $PACKAGE_DIR
+    cp clio_lite_searchkit_lambda.py $PACKAGE_DIR
+    cd $PACKAGE_DIR
+    zip -r9 ${OLDPWD}/clio_lite.zip .
+    cd ${OLDPWD}
+    rmdir $PACKAGE_DIR
     PYCODE_="import sys, json; print(json.load(sys.stdin)['Version'])"
     FUNCTION_VERSION=$(aws lambda update-function-code \
 			   --function-name $FUNCTION_NAME \

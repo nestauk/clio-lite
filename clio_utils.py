@@ -1,6 +1,10 @@
 import json
 
 
+class ElasticsearchError(Exception):
+    pass
+
+
 def try_pop(d, k, default=None):
     """Pop a key from a dict, with a default
     value if the key doesn't exist
@@ -20,14 +24,23 @@ def try_pop(d, k, default=None):
         return v
 
 
-def extract_docs(r, include_source=False):
+def extract_docs(r, include_score=False):
     """Extract the raw data and documents from the
     :obj:`requests.Response`"""
     data = json.loads(r.text)
-    return data['hits']['total'], [dict(_id=row['_id'],
-                                        _index=row['_index'],
-                                        **row['_source'])
-                                   for row in data['hits']['hits']]
+    if 'error' in data:
+        raise ElasticsearchError("Failed with POST query "
+                                 f"{r.request.body}"
+                                 f"\n\nResponse from ES was {data}")
+    docs = []
+    for row in data['hits']['hits']:
+        _row = dict(_id=row['_id'],
+                    _index=row['_index'],
+                    **try_pop(row, '_source', {}))
+        if include_score:
+            _row['_score'] = row['_score']
+        docs.append(_row)
+    return data['hits']['total'], docs
 
 
 def assert_fraction(x, name='value'):
