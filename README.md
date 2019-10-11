@@ -4,7 +4,7 @@ A contextual search of Elasticsearch data, as described in [this blog](https://m
 
 For an interactive sense of how this works, see [the arXlive search tool](https://i5mf7l0opc.execute-api.eu-west-1.amazonaws.com/dev/hierarxy/).
 
-## As a python tool
+## `clio-lite` as python tool
 
 ### Installation
 
@@ -57,13 +57,51 @@ for d in docs:
 
 ### Regular usage
 
-In practice, you will want to play with a whole bunch of hyperparameters to 
+For bulk collection of results, you can use `clio_search_iter`:
+
+```python
+docs = [row for row in clio_search_iter(url=url, index=index, query=query, chunksize=100)]
+```
+
+The results are streamed nicely, so you could write to disk in chunks as you please.
 
 ### Advanced usage
 
 
-My advice is to use the simple interface to understand how your
+In practice, you will want to play with a whole bunch of hyperparameters in order to make the most of your query.
 
+The basic arguments to `clio_search` (and `clio_search_iter`) are:
+
+```
+url (str):        The url at which your elasticsearch endpoint can be found
+index (str):      The index that you want to query
+query (str):      Your query "search" string
+fields=[] (list): A list of fields to search
+limit (int):      Limit the number of results in `clio_search`
+offset (int):     Offset the number of results from the initial document.
+```
+
+There are also the filters for the searches, which could be equal:
+```
+pre_filters=[]:   Any filters to send to Elasticsearch during the *seed query* 
+post_filters=[]:  Any filters to send to Elasticsearch during the *expanded query* 
+```
+
+Finally(ish) there are a number of hyperparameters to play with, which all (except `n_seed_docs`) map to variables [documented here](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-mlt-query.html#mlt-query-term-selection).
+```
+n_seed_docs=None (int):       Use a maxmimum of this many seed documents.
+min_term_freq=1 (int):        Only consider seed terms which occur in all documents with this frequency.
+max_query_terms=10 (int):     Maximum number of important terms to identify in the seed documents.
+min_doc_frac=0.001 (float):   Only consider seed terms which appear more than this fraction of the seed docs.
+max_doc_frac=0.9 (float):     Only consider seed terms which appear less than this fraction of the seed docs.
+min_should_match=0.1 (float): Fraction of important terms from the seed docs explicitly required to match.
+stop_words=[] (list):         A supplementary list of terms to ignore.
+```
+
+Actually finally, any bonus `kwargs` to pass in the POST request to elasticsearch can be passed in via:
+```
+**kwargs
+```
 
 ### Words of warning
 
@@ -73,7 +111,7 @@ My advice is to use the simple interface to understand how your
 * If your expansive search too narrow, expect zero results.
 
 
-## As a serverless deployment for searchkit via AWS Lambda
+## `clio-lite` as a serverless deployment for searchkit via AWS Lambda
 
 There is a modified version of the `clio-lite` which has been designed to be deployed as a serverless interface to Elasticsearch which can then be integrated with [searchkit](http://www.searchkit.co/). A working demonstration [can be found here](https://i5mf7l0opc.execute-api.eu-west-1.amazonaws.com/dev/hierarxy/).
 
