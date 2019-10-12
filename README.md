@@ -33,7 +33,7 @@ Before you can get started, you really need to know how the contextual search is
 1) An initial search is made using your `query` string to Elasticsearch. This generates a numbers of "seed" documents to be used in the second step. If you like, you can specify *filters* on these seed documents and the *number of seed documents* to consider.
 2) A second "expanded" search is made for documents which are **semantically similar** to the seed documents. Again, you can specify *filters* on these documents.
 
-If you like, you don't need to specify any filters at all, as in the previous very basic example. However, if you're interested in the filtering syntax, I suggest looking at the elasticsearch documentation on filtering, and also taking a look at this very example.
+If you like, you don't need to specify any filters at all, as in the previous very basic example. However, if you're interested in the filtering syntax, I suggest looking at the elasticsearch [documentation on filtering](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-filter-context.html#query-filter-context-ex), and also looking at the [syntax for ranges](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-range-query.html) and the [query string syntax](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html#_ranges). This example is also a good place to start:
 
 ```python
 from clio_lite import clio_search
