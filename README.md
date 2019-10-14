@@ -47,8 +47,9 @@ fields = ["title_of_article", "textBody_abstract_article"]     # Consider the ti
 limit = 2                                                      # Only return the top 2 documents
 
 total, docs = clio_search(url=url, index=index, query=query, 
-                          pre_filters=pre_filters, 
+                          pre_filters=pre_filters,
                           post_filters=post_filters, 
+                          fields=fields,
                           limit=limit)
 total, len(docs)
 
