@@ -109,7 +109,7 @@ def find_max(a, b, k):
     return max((a[k], b[k]))
 
 
-def clio_keywords(url, index, fields, max_query_terms=20,
+def clio_keywords(url, index, fields, max_query_terms=10,
                   filters=[], stop_words=None, shard_size=5000,
                   **kwargs):
     endpoint = url
@@ -168,7 +168,7 @@ def clio_keywords(url, index, fields, max_query_terms=20,
 def clio_search(url, index, query,
                 fields=[], n_seed_docs=None,
                 limit=None, offset=None,
-                min_term_freq=1, max_query_terms=20,
+                min_term_freq=1, max_query_terms=10,
                 min_doc_frac=0.001, max_doc_frac=0.9,
                 min_should_match=0.1, pre_filters=[],
                 post_filters=[], stop_words=None,
