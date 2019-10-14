@@ -77,8 +77,34 @@ docs = [row for row in clio_search_iter(url=url, index=index, query=query, chunk
 
 The results are streamed nicely, so you could write to disk in chunks as you please.
 
-### Advanced usage
+### Keywords: getting under the hood
 
+If you'd like to tune your search well (see "Advanced usage"), it's useful to have an idea what terms are being extracted from the seed documents. By using `clio_keywords`, you can do this:
+
+```python
+from clio_lite import clio_keywords
+query = "BERT"
+filters = [{"range":{"year_of_article":{"gte":"2018"}}}]
+keywords = clio_keywords(url=url, index=index, query=query, 
+                         fields=['textBody_abstract_article','title_of_article'],
+                         filters=filters)
+
+for kw in keywords:
+    print(kw)                        
+
+>>> {'key': 'bert', 'score': 6047.572145280995}
+>>> {'key': 'elmo', 'score': 296.9805747752674}
+>>> {'key': 'emotionx', 'score': 278.41499852955593}
+>>> {'key': 'devlin', 'score': 263.85527096668466}
+>>> {'key': 'gendered', 'score': 224.96621543342454}
+>>> {'key': "bert's", 'score': 159.07909433277806}
+>>> {'key': 'contextualized', 'score': 107.54581955071448}
+>>> {'key': 'xlnet', 'score': 106.7422132379966}
+>>> {'key': 'gpt', 'score': 99.54620840751683}
+>>> {'key': 'transformers', 'score': 58.5927866966313}
+```
+
+### Advanced usage
 
 In practice, you will want to play with a whole bunch of hyperparameters in order to make the most of your query.
 
