@@ -1,4 +1,4 @@
-# clio-lite
+# `clio-lite`
 
 Expansive ***contextual searches*** of Elasticsearch data, as described in [this blog](TO BE PUBLISHED SOON). For an interactive sense of how this works, see [the arXlive search tool](https://i5mf7l0opc.execute-api.eu-west-1.amazonaws.com/dev/hierarxy/).
 
