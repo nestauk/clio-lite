@@ -92,7 +92,7 @@ limit (int):      Limit the number of results in `clio_search`
 offset (int):     Offset the number of results from the highest ranking document.
 ```
 
-There are also the filters for the searches, which could be equal:
+There are also the filters for the searches, which could be be the same or different from one another:
 ```
 pre_filters=[]:   Any filters to send to Elasticsearch during the *seed query* 
 post_filters=[]:  Any filters to send to Elasticsearch during the *expanded query* 
