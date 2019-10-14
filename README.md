@@ -1,14 +1,16 @@
-# clio-lite
+# `clio-lite`
 
-A contextual search of Elasticsearch data, as described in [this blog](https://medium.com/@joel.klinger/big-fast-nlp-with-elasticsearch-4ed44924e4d5).
+Expansive ***contextual searches*** of Elasticsearch data, as described in [this blog](TO BE PUBLISHED SOON). For an interactive sense of how this works, see [the arXlive search tool](https://i5mf7l0opc.execute-api.eu-west-1.amazonaws.com/dev/hierarxy/).
 
-For an interactive sense of how this works, see [the arXlive search tool](https://i5mf7l0opc.execute-api.eu-west-1.amazonaws.com/dev/hierarxy/).
+[`clio-lite` as a python tool](https://github.com/nestauk/clio-lite#clio-lite-as-python-tool)
 
-## `clio-lite` as python tool
+[`clio-lite` as a serverless deployment for searchkit via AWS Lambda](https://github.com/nestauk/clio-lite#clio-lite-as-a-serverless-deployment-for-searchkit-via-aws-lambda)
+
+## `clio-lite` as a python tool
 
 ### Installation
 
-`pip install --upgrade git+https://github.com/nestauk/clio-lite`
+`pip install --upgrade git+https://github.com/nestauk/clio-lite.git`
 
 ### Very basic usage
 
@@ -31,7 +33,7 @@ Before you can get started, you really need to know how the contextual search is
 1) An initial search is made using your `query` string to Elasticsearch. This generates a numbers of "seed" documents to be used in the second step. If you like, you can specify *filters* on these seed documents and the *number of seed documents* to consider.
 2) A second "expanded" search is made for documents which are **semantically similar** to the seed documents. Again, you can specify *filters* on these documents.
 
-If you like, you don't need to specify any filters at all, as in the previous very basic example. However, if you're interested in the filtering syntax, I suggest looking at the elasticsearch documentation on filtering, and also taking a look at this very example.
+If you like, you don't need to specify any filters at all, as in the previous very basic example. However, if you're interested in the filtering syntax, I suggest looking at the elasticsearch [documentation on filtering](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-filter-context.html#query-filter-context-ex), and also looking at the [syntax for ranges](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-range-query.html) and the [query string syntax](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html#_ranges). This example is also a good place to start:
 
 ```python
 from clio_lite import clio_search
@@ -87,10 +89,10 @@ index (str):      The index that you want to query
 query (str):      Your query "search" string
 fields=[] (list): A list of fields to search
 limit (int):      Limit the number of results in `clio_search`
-offset (int):     Offset the number of results from the initial document.
+offset (int):     Offset the number of results from the highest ranking document.
 ```
 
-There are also the filters for the searches, which could be equal:
+There are also the filters for the searches, which could be be the same or different from one another:
 ```
 pre_filters=[]:   Any filters to send to Elasticsearch during the *seed query* 
 post_filters=[]:  Any filters to send to Elasticsearch during the *expanded query* 
