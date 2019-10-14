@@ -40,8 +40,8 @@ def simple_query(endpoint, query, fields, filters,
 def more_like_this(endpoint, docs, fields, limit, offset,
                    min_term_freq, max_query_terms,
                    min_doc_frac, max_doc_frac,
-                   min_should_match, total, stop_words,
-                   filters=[], **kwargs):
+                   min_should_match, total, stop_words,                   
+                   filters=[], scroll=False, **kwargs):
     if total == 0:
         return (0, [])
     assert_fraction(min_should_match)
@@ -66,21 +66,26 @@ def more_like_this(endpoint, docs, fields, limit, offset,
             "boost_terms": 1,
             "stop_words": stop_words,
             "minimum_should_match": f'{msm}%',
-            "include": True
+            "include": True,
         }
     }
     _query = {"query": {"bool": {"filter": filters, "must": [mlt]}}}
+    params = {"search_type": "dfs_query_then_fetch"}
     if offset is not None and offset < total:
         _query['from'] = offset
+    elif scroll:
+        params['scroll'] = '1m'
+        scroll = True
+        
     if limit is not None:
         _query['size'] = limit
     logging.debug(_query)
     r = requests.post(url=endpoint,
                       data=json.dumps(_query),
-                      params={"search_type": "dfs_query_then_fetch"},
+                      params=params,
                       **kwargs)
     # If successful, return
-    return extract_docs(r, include_score=True)
+    return extract_docs(r, scroll=scroll, include_score=True)
 
 
 def clio_search(url, index, query,
@@ -90,6 +95,7 @@ def clio_search(url, index, query,
                 min_doc_frac=0.001, max_doc_frac=0.9,
                 min_should_match=0.1, pre_filters=[],
                 post_filters=[], stop_words=[],
+                scroll=False,
                 **kwargs):
     if "headers" not in kwargs:
         kwargs["headers"] = {}
@@ -117,21 +123,30 @@ def clio_search(url, index, query,
                                  total=total,
                                  stop_words=stop_words,
                                  filters=post_filters,
+                                 scroll=scroll,
                                  **kwargs)
     return total, docs
 
 
-def clio_search_iter(chunksize=1000, **kwargs):
+def clio_search_iter(url, index, chunksize=1000, **kwargs):
     try_pop(kwargs, 'limit')
-    offset = try_pop(kwargs, 'offset')
-    offset = 0 if offset is None else offset
+    try_pop(kwargs, 'offset')
     if chunksize > 1000:
         logging.warning('Will not consider chunksize greater than 1000. '
                         'Reverting to chunksize=1000.')
-    limit = chunksize
-    while limit == chunksize:
-        _, docs = clio_search(limit=limit, offset=offset, **kwargs)
+    # First search
+    scroll_id, docs = clio_search(url=url, index=index,
+                                  limit=chunksize, scroll=True, **kwargs)
+    for row in docs:
+        yield row
+
+    # Keep scrolling if required
+    endpoint = urllib.parse.urljoin(f'{url}/', '_search/scroll')
+    while len(docs) == chunksize:
+        r = requests.post(endpoint,
+                          data=json.dumps({'scroll': '1m',
+                                           'scroll_id': scroll_id}),
+                          headers={'Content-Type': 'application/json'})
+        _, docs = extract_docs(r)
         for row in docs:
             yield row
-        offset += chunksize
-        limit = len(docs)

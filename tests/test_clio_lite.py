@@ -21,6 +21,7 @@ def mlt_kwargs():
                 max_doc_frac=0.2,
                 min_should_match=0.5,
                 offset=20,
+                stop_words=[],
                 limit=100,
                 total=1000)
 
@@ -39,6 +40,7 @@ def mlt_query(mlt_kwargs):
                  "max_doc_freq": 200,
                  "boost_terms": 1.,
                  "minimum_should_match": '50%',
+                 "stop_words":mlt_kwargs['stop_words'],
                  "include": True}}]
               }
              }
@@ -192,18 +194,20 @@ def test_search(mocked_mlt_query, mocked_simple_query):
     assert _kwargs['bonus_kwarg2'] == kwargs['bonus_kwarg2']
 
 
+@mock.patch('clio_lite.requests')
+@mock.patch('clio_lite.extract_docs')
 @mock.patch('clio_lite.clio_search')
-def test_search_iter(mocked_search):
+def test_search_iter(mocked_search, mocked_extract_docs, mocked_requests):
     chunksize = 1000
     remainder = 23
-    responses = ((None, [0]*chunksize),
-                 (None, [None]*chunksize),
+    responses = ((None, [None]*chunksize),
                  (None, ['a']*chunksize),
                  (None, ['b']*remainder))
-    mocked_search.side_effect = responses
-    data = [row for row in clio_search_iter()]
+    mocked_search.return_value = (None, [0]*chunksize)
+    mocked_extract_docs.side_effect = responses
+    data = [row for row in clio_search_iter('https://something.com', 'an_index')]
     assert len(data) == 3*chunksize + remainder  # all rows yielded
-    assert mocked_search.call_count == len(responses)  # 4 calls
+    assert mocked_search.call_count == 1  # 3 extract calls + 1 initial call
     assert set(data) == set([0, None, 'a', 'b'])
 
 

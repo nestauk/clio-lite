@@ -24,7 +24,7 @@ def try_pop(d, k, default=None):
         return v
 
 
-def extract_docs(r, include_score=False):
+def extract_docs(r, scroll=False, include_score=False):
     """Extract the raw data and documents from the
     :obj:`requests.Response`"""
     data = json.loads(r.text)
@@ -33,6 +33,7 @@ def extract_docs(r, include_score=False):
                                  f"{r.request.body}"
                                  f"\n\nResponse from ES was {data}")
     docs = []
+    _scroll_id = try_pop(data, '_scroll_id')
     for row in data['hits']['hits']:
         _row = dict(_id=row['_id'],
                     _index=row['_index'],
@@ -40,7 +41,11 @@ def extract_docs(r, include_score=False):
         if include_score:
             _row['_score'] = row['_score']
         docs.append(_row)
-    return data['hits']['total'], docs
+
+    total = data['hits']['total']
+    if _scroll_id is not None and scroll:
+        total = _scroll_id
+    return total, docs
 
 
 def assert_fraction(x, name='value'):
