@@ -24,14 +24,24 @@ def try_pop(d, k, default=None):
         return v
 
 
-def extract_docs(r, scroll=False, include_score=False):
-    """Extract the raw data and documents from the
-    :obj:`requests.Response`"""
+def unpack_if_safe(r):
     data = json.loads(r.text)
     if 'error' in data:
         raise ElasticsearchError("Failed with POST query "
                                  f"{r.request.body}"
                                  f"\n\nResponse from ES was {data}")
+    return data
+
+
+def extract_keywords(r, agg_name='_keywords'):
+    data = unpack_if_safe(r)
+    return data['aggregations'][agg_name]['keywords']['buckets']
+
+
+def extract_docs(r, scroll=None, include_score=False):
+    """Extract the raw data and documents from the
+    :obj:`requests.Response`"""
+    data = unpack_if_safe(r)
     docs = []
     _scroll_id = try_pop(data, '_scroll_id')
     for row in data['hits']['hits']:
@@ -43,7 +53,7 @@ def extract_docs(r, scroll=False, include_score=False):
         docs.append(_row)
 
     total = data['hits']['total']
-    if _scroll_id is not None and scroll:
+    if _scroll_id is not None and scroll is not None:
         total = _scroll_id
     return total, docs
 
