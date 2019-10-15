@@ -5,10 +5,30 @@ import pytest
 from clio_utils import try_pop
 from clio_utils import extract_docs
 from clio_utils import assert_fraction
+from clio_utils import set_headers
+from clio_utils import make_endpoint
+
 from clio_lite import simple_query as c_simple_query
 from clio_lite import more_like_this as c_more_like_this
 from clio_lite import clio_search as c_search
 from clio_lite import clio_search_iter
+from clio_lite import combined_score
+from clio_lite import clio_keywords
+
+
+@pytest.fixture
+def expected_kw_output():
+    return [{'key': 'klinger', 'score': 22.59},
+            {'key': 'joel', 'score': 1.648}]
+
+
+@pytest.fixture
+def raw_keyword_scores():
+    return {'joel': [{'score': 2.3, 'bg_count': 100},
+                     {'score': 1000.3, 'bg_count': 1},
+                     {'score': 1.3, 'bg_count': 1000}],
+            'klinger': [{'score': 0.3, 'bg_count': 100},
+                        {'score': 100.8, 'bg_count': 23}]}
 
 
 @pytest.fixture
@@ -45,6 +65,48 @@ def mlt_query(mlt_kwargs):
               }
              }
             }
+
+
+def test_set_headers():
+    h = 'headers'
+    ctype = 'Content-Type'
+    appjson = 'application/json'
+    for x in ({}, {h: {ctype: appjson}}):
+        set_headers(x)
+        assert x[h][ctype] == appjson
+
+
+def test_make_endpoint():
+    for (url, index) in (('http://example.com', 'index'),
+                         ('http://another.com', 'another_idx')):
+        assert make_endpoint(url, index) == f'{url}/{index}/_search'
+    assert make_endpoint(url, index=None) == f'{url}/_search'
+
+
+def test_combined_score(raw_keyword_scores, expected_kw_output):
+    assert pytest.approx(combined_score(raw_keyword_scores['joel']), 0.001) == expected_kw_output[1]['score']
+    assert pytest.approx(combined_score(raw_keyword_scores['klinger']), 0.01) == expected_kw_output[0]['score']
+
+
+@mock.patch('clio_lite.simple_query')
+def test_clio_keywords(mocked_search, expected_kw_output, raw_keyword_scores):
+    mocked_search.side_effect = ([{'key': 'klinger', **raw_keyword_scores['klinger'][1]},
+                                  {'key': 'joel', **raw_keyword_scores['joel'][1]}],
+                                 [{'key': 'joel', **raw_keyword_scores['joel'][2]}],
+                                 [{'key': 'joel', **raw_keyword_scores['joel'][0]},
+                                  {'key': 'klinger', **raw_keyword_scores['klinger'][0]}])
+
+    fields = ['a', 'b', 'c']
+    kwargs = dict(url='http://www.example.com', query='something',
+                  fields=fields, index='blah',
+                  filters={'a_pre_filter': None},
+                  n_seed_docs=134, max_query_terms=123,
+                  post_filters={'a_post_filter': None})
+    output_data = clio_keywords(**kwargs)
+    assert mocked_search.call_count == len(fields)
+    for row in output_data:
+        row['score'] = pytest.approx(row['score'], 0.01)
+    assert output_data == expected_kw_output
 
 
 @mock.patch('clio_lite.json')
@@ -144,7 +206,7 @@ def test_c_more_like_this_bad_limit(mocked_extract, mocked_reqs,
     query = kwargs['data']
     assert 'from' not in query
     assert query.pop('size') == mlt_kwargs['limit']
-    assert query['query']['bool'].pop('filter') == []    
+    assert query['query']['bool'].pop('filter') == []
     assert query == mlt_query
 
 
@@ -169,6 +231,7 @@ def test_search(mocked_mlt_query, mocked_simple_query):
     kwargs = dict(url='http://www.example.com', query='something',
                   fields=['a', 'b', 'c'], index='blah',
                   pre_filters={'a_pre_filter': None},
+                  n_seed_docs=134,
                   post_filters={'a_post_filter': None},
                   bonus_kwarg1=None, bonus_kwarg2=None)
     total, docs = c_search(**kwargs)
@@ -179,6 +242,7 @@ def test_search(mocked_mlt_query, mocked_simple_query):
     assert len(_args) == 0
     assert _kwargs.pop('headers') == {'Content-Type':
                                       'application/json'}
+    assert _kwargs.pop('size') == kwargs.pop('n_seed_docs')
     assert _kwargs == dict(endpoint=expected_endpoint,
                            query=kwargs['query'],
                            fields=kwargs['fields'],
@@ -229,7 +293,7 @@ def test_try_pop():
 def test_extract_docs(mocked_json):
     mocked_response = mock.MagicMock()
     hits = [{'_id': 'something', '_index': 'something',
-             '_source': {'something': 'else'}}]*100    
+             '_source': {'something': 'else'}}]*100
     _total = 10
     mocked_json.loads.return_value = {'hits': {'total': _total,
                                                'hits': hits}}

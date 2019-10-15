@@ -1,8 +1,25 @@
 import json
+import urllib
 
 
 class ElasticsearchError(Exception):
     pass
+
+
+def set_headers(kwargs):
+    """Set standard headers here"""
+    if 'headers' not in kwargs:
+        kwargs['headers'] = {}
+    kwargs["headers"]["Content-Type"] = "application/json"
+
+
+def make_endpoint(url, index):
+    """Combine the endpoint URL and index into the _search endpoint path"""
+    endpoint = url
+    if index is not None:
+        endpoint = urllib.parse.urljoin(f'{endpoint}/', index)
+    endpoint = urllib.parse.urljoin(f'{endpoint}/', '_search')
+    return endpoint
 
 
 def try_pop(d, k, default=None):
