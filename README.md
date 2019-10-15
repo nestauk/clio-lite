@@ -104,6 +104,22 @@ for kw in keywords:
 >>> {'key': 'transformers', 'score': 58.5927866966313}
 ```
 
+### Stop words
+
+By default stop words (extracted via the `stop-words` package) are used. You can inspect these by importing them:
+
+```python
+from clio_lite import STOP_WORDS
+```
+
+you can append extra stop words as follows:
+
+```python
+STOP_WORDS += ['water', 'sugar', 'pie']
+```
+
+and otherwise, you can override them completely by specifying them in the function calls (see 'Advanced usage').
+
 ### Advanced usage
 
 In practice, you will want to play with a whole bunch of hyperparameters in order to make the most of your query.
