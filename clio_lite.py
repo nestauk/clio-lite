@@ -311,9 +311,9 @@ def clio_search_iter(url, index, chunksize=1000, scroll='1m', **kwargs):
     """
     try_pop(kwargs, 'limit')  # Ignore limit and offset
     try_pop(kwargs, 'offset')
-    if chunksize > 1000:
-        logging.warning('Will not consider chunksize greater than 1000. '
-                        'Reverting to chunksize=1000.')
+    if chunksize > 10000:
+        logging.warning('Will not consider chunksize greater than 10000. '
+                        'Reverting to chunksize=10000.')
     # First search
     scroll_id, docs = clio_search(url=url, index=index,
                                   limit=chunksize, scroll=scroll, **kwargs)
