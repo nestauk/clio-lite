@@ -23,6 +23,14 @@ e.g. :obj:`from clio_lite import STOP_WORDS; STOP_WORDS += ['water']`
 STOP_WORDS = get_stop_words('english')
 
 
+"""
+Maximum chunksize for doc iterator: Feel free to change.
+
+e.g. :obj:`from clio_lite import MAX_CHUNKSIZE; MAX_CHUNKSIZE = 10`
+"""
+MAX_CHUNKSIZE = 10000
+
+
 def combined_score(keyword_scores):
     """Combine Lucene keyword scores according to my own recipe,
     which is calculate a weighted combination of the scores,
@@ -311,9 +319,9 @@ def clio_search_iter(url, index, chunksize=1000, scroll='1m', **kwargs):
     """
     try_pop(kwargs, 'limit')  # Ignore limit and offset
     try_pop(kwargs, 'offset')
-    if chunksize > 10000:
-        logging.warning('Will not consider chunksize greater than 10000. '
-                        'Reverting to chunksize=10000.')
+    if chunksize > MAX_CHUNKSIZE:
+        logging.warning(f'Will not consider chunksize greater than {MAX_CHUNKSIZE}. '
+                        f'Reverting to chunksize={MAX_CHUNKSIZE}.')
     # First search
     scroll_id, docs = clio_search(url=url, index=index,
                                   limit=chunksize, scroll=scroll, **kwargs)
