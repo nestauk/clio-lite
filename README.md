@@ -120,6 +120,10 @@ STOP_WORDS += ['water', 'sugar', 'pie']
 
 and otherwise, you can override them completely by specifying them in the function calls (see 'Advanced usage').
 
+### A note on "relevance" scoring
+
+The scoring is given by the tf-idf weighted document similarity of all documents in Elasticsearch, considering only the top `max_query_terms` terms of the `n_seed_docs` documents retrieved from the initial query. Documents which contain none of these terms are explicitly excluded from the search results. In effect, the document similarity is calculated with respect to the tf-idf weighted centroid of the `n_seed_docs` documents. This is the point of `clio-lite`: this "centroid" document should capture contextually similar terms. Note, that because of this procedure, if many unrelated (i.e. low vocabulary overlap) documents are the 'most relevant' then the highest relevance score will be low. See [here for the explicit formula](https://lucene.apache.org/core/4_9_0/core/org/apache/lucene/search/similarities/TFIDFSimilarity.html) used for the calculation of document similarity.
+
 ### Advanced usage
 
 In practice, you will want to play with a whole bunch of hyperparameters in order to make the most of your query.
