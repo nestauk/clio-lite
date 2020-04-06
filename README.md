@@ -1,6 +1,6 @@
 # `clio-lite`
 
-Expansive ***contextual searches*** of Elasticsearch data, as described in [this blog](TO BE PUBLISHED SOON). For an interactive sense of how this works, see [the arXlive search tool](https://arxlive.org).
+Expansive ***contextual searches*** of Elasticsearch data, as described in [this blog](https://towardsdatascience.com/big-fast-nlp-with-elasticsearch-72ffd7ef8f2e). For an interactive sense of how this works, see [the arXlive search tool](https://arxlive.org).
 
 [`clio-lite` as a python tool](https://github.com/nestauk/clio-lite#clio-lite-as-python-tool)
 
