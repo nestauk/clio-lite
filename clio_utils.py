@@ -72,6 +72,8 @@ def extract_docs(r, scroll=None, include_score=False):
     total = data['hits']['total']
     if _scroll_id is not None and scroll is not None:
         total = _scroll_id
+    elif type(total) is dict:  # Breaking change from ES 6.x --> 7.x
+        total = total['value']
     return total, docs
 
 
