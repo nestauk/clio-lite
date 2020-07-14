@@ -226,6 +226,17 @@ def clio_keywords(url, index, fields, max_query_terms=10,
     return keywords
 
 
+def _clio_search(url, index, query,
+                fields=[], n_seed_docs=None,
+                limit=None, offset=None,
+                min_term_freq=1, max_query_terms=10,
+                min_doc_frac=0.001, max_doc_frac=0.9,
+                min_should_match=0.1, pre_filters=[],
+                post_filters=[], stop_words=STOP_WORDS,
+                scroll=None, **kwargs):
+
+    
+
 def clio_search(url, index, query,
                 fields=[], n_seed_docs=None,
                 limit=None, offset=None,
@@ -272,6 +283,11 @@ def clio_search(url, index, query,
                                size=n_seed_docs,
                                filters=pre_filters,
                                **kwargs)
+
+    # May as well break out early if there aren't any hits
+    if total == 0:
+        return total, docs
+
     # Make the expanded search query
     total, docs = more_like_this(endpoint=endpoint,
                                  docs=docs, fields=fields,
