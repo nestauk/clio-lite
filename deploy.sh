@@ -32,7 +32,7 @@ then
     cd $PACKAGE_DIR
     zip -r9 ${OLDPWD}/clio_lite.zip .
     cd ${OLDPWD}
-    rmdir $PACKAGE_DIR
+    rm -rf $PACKAGE_DIR
     PYCODE_="import sys, json; print(json.load(sys.stdin)['Version'])"
     FUNCTION_VERSION=$(aws lambda update-function-code \
 			   --function-name $FUNCTION_NAME \
