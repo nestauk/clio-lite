@@ -48,6 +48,7 @@ def combined_score(keyword_scores):
 
 def simple_query(endpoint, query, fields, filters,
                  size=None, aggregations=None,
+                 response_mode=False,
                  **kwargs):
     """Perform a simple query on Elasticsearch.
 
@@ -58,6 +59,7 @@ def simple_query(endpoint, query, fields, filters,
         filters (list): List of ES filters.
         size (int): Number of documents to return.
         aggregations: Do not use this directly. See :obj:`clio_keywords`.
+        response_mode: Do not use this directly. See :obj:`clio_lite_searchkit_lambda`.
     Returns:
         {total, docs} (tuple): {total number of docs}, {top :obj:`size` docs}
     """
@@ -86,7 +88,12 @@ def simple_query(endpoint, query, fields, filters,
     # "Aggregation mode"
     if aggregations is not None:
         return extract_keywords(r)
-    return extract_docs(r)
+
+    total, docs = extract_docs(r)
+    # "Response mode"
+    if response_mode and total == 0:
+        return total, r
+    return total, docs
 
 
 def more_like_this(endpoint, docs, fields, limit, offset,
@@ -94,7 +101,9 @@ def more_like_this(endpoint, docs, fields, limit, offset,
                    min_doc_frac, max_doc_frac,
                    min_should_match, total,
                    stop_words=STOP_WORDS,
-                   filters=[], scroll=None, **kwargs):
+                   filters=[], scroll=None,
+                   response_mode=False,
+                   **kwargs):
     """Make an MLT query
 
     Args:
@@ -164,6 +173,8 @@ def more_like_this(endpoint, docs, fields, limit, offset,
                       data=json.dumps(_query),
                       params=params,
                       **kwargs)
+    if response_mode:
+        return None, r
     # If successful, return
     return extract_docs(r, scroll=scroll, include_score=True)
 
@@ -225,17 +236,6 @@ def clio_keywords(url, index, fields, max_query_terms=10,
                       key=lambda kw: kw['score'], reverse=True)
     return keywords
 
-
-def _clio_search(url, index, query,
-                fields=[], n_seed_docs=None,
-                limit=None, offset=None,
-                min_term_freq=1, max_query_terms=10,
-                min_doc_frac=0.001, max_doc_frac=0.9,
-                min_should_match=0.1, pre_filters=[],
-                post_filters=[], stop_words=STOP_WORDS,
-                scroll=None, **kwargs):
-
-    
 
 def clio_search(url, index, query,
                 fields=[], n_seed_docs=None,

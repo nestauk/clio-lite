@@ -25,7 +25,8 @@ then
     # Deploy new lambda version
     OLDPWD=$PWD
     mkdir $PACKAGE_DIR &> /dev/null
-    pip install --target ./$PACKAGE_DIR requests
+    pip install -r requirements.txt --target ./$PACKAGE_DIR
+    cp clio_lite.py $PACKAGE_DIR
     cp clio_utils.py $PACKAGE_DIR
     cp clio_lite_searchkit_lambda.py $PACKAGE_DIR
     cd $PACKAGE_DIR
