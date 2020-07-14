@@ -78,17 +78,22 @@ def lambda_handler(event, context=None):
     max_query_terms = try_pop(query, 'max_query_terms', 10)
     min_doc_frac = try_pop(query, 'min_doc_frac', 0.001)
     max_doc_frac = try_pop(query, 'max_doc_frac', 0.90)
-    min_should_match = try_pop(query, 'minimum_should_match', '20%')
+    min_should_match = try_pop(query, 'minimum_should_match', 0.2)
     old_query = deepcopy(try_pop(query, 'query'))
     fields = extract_fields(old_query)
 
     # Make the search
-    _, r = clio_search(url, index, query, fields=fields,
+    _, r = clio_search(f"https://{endpoint}", index, old_query,
+                       fields=fields,
+                       limit=limit,
+                       offset=offset,
                        min_term_freq=min_term_freq,
                        max_query_terms=max_query_terms,
                        min_doc_frac=min_doc_frac,
                        max_doc_frac=max_doc_frac,
                        min_should_match=min_should_match,
+                       filters=post_filter,
+                       post_aggregration=query,
                        response_mode=True,
                        **event['headers'])
     return format_response(r)

@@ -63,16 +63,18 @@ def simple_query(endpoint, query, fields, filters,
     Returns:
         {total, docs} (tuple): {total number of docs}, {top :obj:`size` docs}
     """
-    _query = {
-        "_source": False,
-        "query": {
+    _query = {"_source": False}
+    if type(query) is dict:
+        _query['query'] = query
+    else:
+        _query['query'] = {
             "bool": {
                 "must": [{"multi_match": {"query": query.lower(),
                                           "fields": fields}}],
                 "filter": filters
             }
         }
-    }
+
     # Assume that if you want aggregations, you don't want anything else
     if aggregations is not None:
         _query['aggregations'] = aggregations
@@ -103,6 +105,7 @@ def more_like_this(endpoint, docs, fields, limit, offset,
                    stop_words=STOP_WORDS,
                    filters=[], scroll=None,
                    response_mode=False,
+                   post_aggregation={},
                    **kwargs):
     """Make an MLT query
 
@@ -170,7 +173,7 @@ def more_like_this(endpoint, docs, fields, limit, offset,
     # Make the query
     logging.debug(_query)
     r = requests.post(url=endpoint,
-                      data=json.dumps(_query),
+                      data=json.dumps(dict(**post_aggregration, **_query)),
                       params=params,
                       **kwargs)
     if response_mode:
@@ -244,7 +247,7 @@ def clio_search(url, index, query,
                 min_doc_frac=0.001, max_doc_frac=0.9,
                 min_should_match=0.1, pre_filters=[],
                 post_filters=[], stop_words=STOP_WORDS,
-                scroll=None, **kwargs):
+                scroll=None, post_aggregation={}, **kwargs):
     """Perform a contextual search of Elasticsearch data.
 
     Args:
@@ -300,6 +303,7 @@ def clio_search(url, index, query,
                                  total=total,
                                  stop_words=stop_words,
                                  filters=post_filters,
+                                 post_aggregation=post_aggregation,
                                  scroll=scroll,
                                  **kwargs)
     return total, docs
