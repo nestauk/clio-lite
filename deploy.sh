@@ -25,13 +25,14 @@ then
     # Deploy new lambda version
     OLDPWD=$PWD
     mkdir $PACKAGE_DIR &> /dev/null
-    pip install --target ./$PACKAGE_DIR requests
+    pip install -r requirements.txt --target ./$PACKAGE_DIR
+    cp clio_lite.py $PACKAGE_DIR
     cp clio_utils.py $PACKAGE_DIR
     cp clio_lite_searchkit_lambda.py $PACKAGE_DIR
     cd $PACKAGE_DIR
     zip -r9 ${OLDPWD}/clio_lite.zip .
     cd ${OLDPWD}
-    rmdir $PACKAGE_DIR
+    rm -rf $PACKAGE_DIR
     PYCODE_="import sys, json; print(json.load(sys.stdin)['Version'])"
     FUNCTION_VERSION=$(aws lambda update-function-code \
 			   --function-name $FUNCTION_NAME \

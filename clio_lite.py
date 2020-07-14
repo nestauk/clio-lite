@@ -48,6 +48,7 @@ def combined_score(keyword_scores):
 
 def simple_query(endpoint, query, fields, filters,
                  size=None, aggregations=None,
+                 response_mode=False,
                  **kwargs):
     """Perform a simple query on Elasticsearch.
 
@@ -58,19 +59,22 @@ def simple_query(endpoint, query, fields, filters,
         filters (list): List of ES filters.
         size (int): Number of documents to return.
         aggregations: Do not use this directly. See :obj:`clio_keywords`.
+        response_mode: Do not use this directly. See :obj:`clio_lite_searchkit_lambda`.
     Returns:
         {total, docs} (tuple): {total number of docs}, {top :obj:`size` docs}
     """
-    _query = {
-        "_source": False,
-        "query": {
+    _query = {"_source": False}
+    if type(query) is dict:
+        _query['query'] = query
+    else:
+        _query['query'] = {
             "bool": {
                 "must": [{"multi_match": {"query": query.lower(),
                                           "fields": fields}}],
                 "filter": filters
             }
         }
-    }
+
     # Assume that if you want aggregations, you don't want anything else
     if aggregations is not None:
         _query['aggregations'] = aggregations
@@ -86,7 +90,12 @@ def simple_query(endpoint, query, fields, filters,
     # "Aggregation mode"
     if aggregations is not None:
         return extract_keywords(r)
-    return extract_docs(r)
+
+    total, docs = extract_docs(r)
+    # "Response mode"
+    if response_mode and total == 0:
+        return total, r
+    return total, docs
 
 
 def more_like_this(endpoint, docs, fields, limit, offset,
@@ -94,7 +103,10 @@ def more_like_this(endpoint, docs, fields, limit, offset,
                    min_doc_frac, max_doc_frac,
                    min_should_match, total,
                    stop_words=STOP_WORDS,
-                   filters=[], scroll=None, **kwargs):
+                   filters=[], scroll=None,
+                   response_mode=False,
+                   post_aggregation={},
+                   **kwargs):
     """Make an MLT query
 
     Args:
@@ -161,9 +173,11 @@ def more_like_this(endpoint, docs, fields, limit, offset,
     # Make the query
     logging.debug(_query)
     r = requests.post(url=endpoint,
-                      data=json.dumps(_query),
+                      data=json.dumps(dict(**post_aggregation, **_query)),
                       params=params,
                       **kwargs)
+    if response_mode:
+        return None, r
     # If successful, return
     return extract_docs(r, scroll=scroll, include_score=True)
 
@@ -233,7 +247,7 @@ def clio_search(url, index, query,
                 min_doc_frac=0.001, max_doc_frac=0.9,
                 min_should_match=0.1, pre_filters=[],
                 post_filters=[], stop_words=STOP_WORDS,
-                scroll=None, **kwargs):
+                scroll=None, post_aggregation={}, **kwargs):
     """Perform a contextual search of Elasticsearch data.
 
     Args:
@@ -272,6 +286,11 @@ def clio_search(url, index, query,
                                size=n_seed_docs,
                                filters=pre_filters,
                                **kwargs)
+
+    # May as well break out early if there aren't any hits
+    if total == 0:
+        return total, docs
+
     # Make the expanded search query
     total, docs = more_like_this(endpoint=endpoint,
                                  docs=docs, fields=fields,
@@ -284,6 +303,7 @@ def clio_search(url, index, query,
                                  total=total,
                                  stop_words=stop_words,
                                  filters=post_filters,
+                                 post_aggregation=post_aggregation,
                                  scroll=scroll,
                                  **kwargs)
     return total, docs
