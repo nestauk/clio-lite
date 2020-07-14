@@ -173,7 +173,7 @@ def more_like_this(endpoint, docs, fields, limit, offset,
     # Make the query
     logging.debug(_query)
     r = requests.post(url=endpoint,
-                      data=json.dumps(dict(**post_aggregration, **_query)),
+                      data=json.dumps(dict(**post_aggregation, **_query)),
                       params=params,
                       **kwargs)
     if response_mode:

@@ -92,7 +92,7 @@ def lambda_handler(event, context=None):
                        min_doc_frac=min_doc_frac,
                        max_doc_frac=max_doc_frac,
                        min_should_match=min_should_match,
-                       post_aggregration=query,
+                       post_aggregation=query,
                        response_mode=True,
-                       **event['headers'])
+                       headers=event['headers'])
     return format_response(r)
