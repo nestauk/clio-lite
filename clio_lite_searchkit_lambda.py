@@ -4,6 +4,7 @@ import os
 from copy import deepcopy
 from clio_utils import try_pop
 from clio_utils import extract_docs
+from clio_utils import unpack_if_safe
 from clio_lite import clio_search
 
 
@@ -16,14 +17,14 @@ def format_response(response):
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Credentials": True
         },
-        "body": response.text
+        "body": make_es7_safe(response)
     }
 
 
 def extract_fields(q):
-    """Extract which fields are being interrogated 
+    """Extract which fields are being interrogated
     by the default searchkit request"""
-    return q["bool"]["should"][1]["multi_match"]["fields"]
+    return q["simple_query_string"]["fields"]
 
 
 def pop_upper_lim(post_filter):
@@ -34,6 +35,15 @@ def pop_upper_lim(post_filter):
             continue
         if 'lte' in limits and int(limits['lte']) >= lim:
             post_filter[field].pop('lte')
+
+
+def make_es7_safe(r):
+    """Fix hits.total.value breaking change from ES 6.x --> 7.x"""
+    data = unpack_if_safe(r)
+    total = data['hits']['total']
+    if type(total) is dict:
+        data['hits']['total'] = total['value']
+    return json.dumps(data)
 
 
 def lambda_handler(event, context=None):
@@ -61,12 +71,12 @@ def lambda_handler(event, context=None):
     endpoint = event['headers'].pop('es-endpoint')
     if endpoint not in os.environ['ALLOWED_ENDPOINTS'].split(";"):
         raise ValueError(f'{endpoint} has not been registered')
-
     slug = event['pathParameters']['proxy']
     # If not a search query, return
     if not slug.endswith("_search") or 'query' not in query:
         url = f"https://{endpoint}/{slug}"
         r = requests.post(url, data=json.dumps(query),
+                          params={"rest_total_hits_as_int": "true"},
                           headers=event['headers'])
         return format_response(r)
 
@@ -95,4 +105,5 @@ def lambda_handler(event, context=None):
                        post_aggregation=query,
                        response_mode=True,
                        headers=event['headers'])
+
     return format_response(r)
