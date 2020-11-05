@@ -111,7 +111,7 @@ def test_clio_keywords(mocked_search, expected_kw_output, raw_keyword_scores):
 
 @mock.patch('clio_lite.json')
 @mock.patch('clio_lite.requests')
-@mock.patch('clio_lite.extract_docs')
+@mock.patch('clio_lite.extract_docs', return_value=(None, None))
 def test_c_simple_query_no_filters(mocked_extract, mocked_reqs,
                                    mocked_json):
     # Make an input query fixture and output query fixture
@@ -127,7 +127,7 @@ def test_c_simple_query_no_filters(mocked_extract, mocked_reqs,
 
 @mock.patch('clio_lite.json.dumps', side_effect=lambda x: x)
 @mock.patch('clio_lite.requests')
-@mock.patch('clio_lite.extract_docs')
+@mock.patch('clio_lite.extract_docs', return_value=(None, None))
 def test_c_simple_query_filters(mocked_extract, mocked_reqs,
                                 mocked_json):
     # Make an input query fixture and output query fixture
@@ -154,7 +154,7 @@ def test_assert_fraction():
 
 @mock.patch('clio_lite.json.dumps', side_effect=lambda x: x)
 @mock.patch('clio_lite.requests')
-@mock.patch('clio_lite.extract_docs')
+@mock.patch('clio_lite.extract_docs', return_value=(None, None))
 def test_c_more_like_this_filters(mocked_extract, mocked_reqs,
                                   mocked_json,
                                   mlt_kwargs, mlt_query):
@@ -175,7 +175,7 @@ def test_c_more_like_this_filters(mocked_extract, mocked_reqs,
 
 @mock.patch('clio_lite.json.dumps', side_effect=lambda x: x)
 @mock.patch('clio_lite.requests')
-@mock.patch('clio_lite.extract_docs')
+@mock.patch('clio_lite.extract_docs', return_value=(None, None))
 def test_c_more_like_this_no_filters(mocked_extract, mocked_reqs,
                                      mocked_json,
                                      mlt_kwargs, mlt_query):
@@ -193,7 +193,7 @@ def test_c_more_like_this_no_filters(mocked_extract, mocked_reqs,
 
 @mock.patch('clio_lite.json.dumps', side_effect=lambda x: x)
 @mock.patch('clio_lite.requests')
-@mock.patch('clio_lite.extract_docs')
+@mock.patch('clio_lite.extract_docs', return_value=(None, None))
 def test_c_more_like_this_bad_limit(mocked_extract, mocked_reqs,
                                     mocked_json,
                                     mlt_kwargs, mlt_query):
@@ -212,7 +212,7 @@ def test_c_more_like_this_bad_limit(mocked_extract, mocked_reqs,
 
 @mock.patch('clio_lite.json.dumps', side_effect=lambda x: x)
 @mock.patch('clio_lite.requests')
-@mock.patch('clio_lite.extract_docs')
+@mock.patch('clio_lite.extract_docs', return_value=(None, None))
 def test_c_more_like_this_zero_total(mocked_extract, mocked_reqs,
                                      mocked_json,
                                      mlt_kwargs, mlt_query):
