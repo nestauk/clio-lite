@@ -67,6 +67,11 @@ def lambda_handler(event, context=None):
                     continue
                 pop_upper_lim(row['range'])
 
+    # Fixes new host-authentication permissions, as this value
+    # won't match the lambda host
+    if 'Host' in event['headers']:
+        event['headers'].pop('Host')
+        
     # Generate the endpoint URL, and validate
     endpoint = event['headers'].pop('es-endpoint')
     if endpoint not in os.environ['ALLOWED_ENDPOINTS'].split(";"):
